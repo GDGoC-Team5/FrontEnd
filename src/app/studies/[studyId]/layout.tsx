@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { useMemo, type ReactNode } from 'react';
 import { isApiError } from '@/api/errors';
 import { getMembers, getStudy } from '@/api/studies';
-import AppSidebar, { SIDEBAR_WIDTH } from '@/components/AppSidebar';
+import AppSidebar, { SIDEBAR_WIDTH, TOPBAR_HEIGHT } from '@/components/AppSidebar';
 import { ErrorBox, Forbidden, LoadingBox } from '@/components/ui';
 import { useRequireAuth } from '@/contexts/AuthContext';
 import { StudyContext, type StudyContextValue } from '@/contexts/StudyContext';
@@ -75,8 +75,17 @@ export default function StudyLayout({ children }: { children: ReactNode }) {
     <StudyContext.Provider value={value}>
       <Box sx={{ minHeight: '100vh', bgcolor: colors.bg }}>
         <AppSidebar studyId={studyId} studyName={value.study.name} role={value.myRole} />
-        <Box component="main" sx={{ ml: `${SIDEBAR_WIDTH}px`, px: { xs: 3, md: 5.5 }, pt: { xs: 5, md: 8 }, pb: 8 }}>
-          <Box sx={{ maxWidth: 1040 }}>{children}</Box>
+        {/* 큰 모니터에서도 왼쪽에 쏠리지 않게: 최대 1440px까지 넓어지고 가운데 정렬 */}
+        <Box
+          component="main"
+          sx={{
+            ml: { xs: 0, md: `${SIDEBAR_WIDTH}px` },
+            px: { xs: 2, sm: 3, md: 5, lg: 6 },
+            pt: { xs: `${TOPBAR_HEIGHT + 28}px`, md: 8 },
+            pb: 8,
+          }}
+        >
+          <Box sx={{ maxWidth: 1440, mx: 'auto' }}>{children}</Box>
         </Box>
       </Box>
     </StudyContext.Provider>

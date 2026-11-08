@@ -119,7 +119,7 @@ export default function HomePage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: colors.bg }}>
-      <Box sx={{ maxWidth: 1180, mx: 'auto', px: { xs: 2, md: 4 }, py: { xs: 4, md: 8 } }}>
+      <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 6 }, py: { xs: 4, md: 8 } }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2, fontSize: 14, color: colors.textMuted }}>
           <span>{user.nickname}님</span>
           <Box component="button" type="button" onClick={() => void logout()} sx={{ border: 0, background: 'none', p: 0, color: colors.textMuted, cursor: 'pointer', font: 'inherit', textDecoration: 'underline' }}>

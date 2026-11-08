@@ -1,14 +1,18 @@
 'use client';
 
-import { Box, ButtonBase, Typography } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import { Box, ButtonBase, Drawer, IconButton, Typography } from '@mui/material';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import StatusChip from '@/components/StatusChip';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors } from '@/theme/theme';
 import type { StudyRole } from '@/types/api';
 
 export const SIDEBAR_WIDTH = 239;
+/** 좁은 화면(태블릿·폰)에서 위에 뜨는 바 높이 */
+export const TOPBAR_HEIGHT = 60;
 
 interface NavItem {
   label: string;
@@ -42,7 +46,14 @@ const linkSx = {
   '&:hover': { color: '#fff' },
 };
 
-export default function AppSidebar({ studyId, studyName, role }: { studyId: number; studyName: string; role: StudyRole }) {
+interface SidebarProps {
+  studyId: number;
+  studyName: string;
+  role: StudyRole;
+}
+
+/** 사이드바 안쪽 내용 (넓은 화면의 고정 사이드바와 좁은 화면의 서랍 메뉴가 같이 써요) */
+function SidebarContent({ studyId, studyName, role, onNavigate }: SidebarProps & { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const isManageView = pathname.includes('/manage');
@@ -54,24 +65,8 @@ export default function AppSidebar({ studyId, studyName, role }: { studyId: numb
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
-    <Box
-      component="nav"
-      sx={{
-        position: 'fixed',
-        inset: '0 auto 0 0',
-        width: SIDEBAR_WIDTH,
-        bgcolor: colors.navy,
-        color: '#fff',
-        display: 'flex',
-        flexDirection: 'column',
-        px: '21px',
-        pt: '45px',
-        pb: 4,
-        zIndex: 10,
-        overflowY: 'auto',
-      }}
-    >
-      <Link href="/home" style={{ color: 'inherit', textDecoration: 'none' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: '100%', px: '21px', pt: '45px', pb: 4, color: '#fff' }}>
+      <Link href="/home" onClick={onNavigate} style={{ color: 'inherit', textDecoration: 'none' }}>
         <Typography sx={{ fontSize: 24, fontWeight: 800, px: '3px' }}>스터디 기록 허브</Typography>
       </Link>
       <Typography sx={{ fontSize: 19, mt: 1, px: '3px', opacity: 0.95 }} noWrap title={studyName}>
@@ -86,6 +81,7 @@ export default function AppSidebar({ studyId, studyName, role }: { studyId: numb
               key={it.href}
               component={Link}
               href={it.href}
+              onClick={onNavigate}
               sx={{
                 justifyContent: 'flex-start',
                 height: 48,
@@ -133,18 +129,91 @@ export default function AppSidebar({ studyId, studyName, role }: { studyId: numb
 
         <Box sx={{ mt: 3, px: 1 }}>
           {role === 'MANAGER' && (
-            <Box component={Link} href={isManageView ? `/studies/${studyId}/dashboard` : `/studies/${studyId}/manage`} sx={linkSx}>
+            <Box component={Link} href={isManageView ? `/studies/${studyId}/dashboard` : `/studies/${studyId}/manage`} onClick={onNavigate} sx={linkSx}>
               {isManageView ? '스터디원 화면 보기 →' : '운영진 화면 보기 →'}
             </Box>
           )}
-          <Box component={Link} href="/home" sx={linkSx}>
+          <Box component={Link} href="/home" onClick={onNavigate} sx={linkSx}>
             ← 내 스터디 목록
           </Box>
-          <Box component="button" type="button" onClick={() => void logout()} sx={{ ...linkSx, background: 'none', border: 0, p: 0, py: 0.5, cursor: 'pointer', font: 'inherit', fontSize: 15 }}>
+          <Box
+            component="button"
+            type="button"
+            onClick={() => void logout()}
+            sx={{ ...linkSx, background: 'none', border: 0, p: 0, py: 0.5, cursor: 'pointer', font: 'inherit', fontSize: 15 }}
+          >
             로그아웃
           </Box>
         </Box>
       </Box>
     </Box>
+  );
+}
+
+/**
+ * 넓은 화면(900px 이상): 왼쪽에 고정된 사이드바 (피그마 그대로)
+ * 좁은 화면(900px 미만): 위쪽 바 + ☰ 버튼을 누르면 왼쪽에서 메뉴가 열려요 (혜리 피드백)
+ */
+export default function AppSidebar(props: SidebarProps) {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  // 메뉴에서 다른 화면으로 이동하면 서랍 닫기
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  return (
+    <>
+      <Box
+        component="nav"
+        sx={{
+          display: { xs: 'none', md: 'flex' },
+          position: 'fixed',
+          inset: '0 auto 0 0',
+          width: SIDEBAR_WIDTH,
+          bgcolor: colors.navy,
+          zIndex: 10,
+          overflowY: 'auto',
+        }}
+      >
+        <SidebarContent {...props} />
+      </Box>
+
+      <Box
+        component="header"
+        sx={{
+          display: { xs: 'flex', md: 'none' },
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: TOPBAR_HEIGHT,
+          bgcolor: colors.navy,
+          color: '#fff',
+          alignItems: 'center',
+          gap: 1,
+          px: 1,
+          zIndex: 20,
+        }}
+      >
+        <IconButton onClick={() => setOpen(true)} aria-label="메뉴 열기" sx={{ color: '#fff' }}>
+          <MenuIcon />
+        </IconButton>
+        <Typography sx={{ fontWeight: 800, fontSize: 18, whiteSpace: 'nowrap' }}>스터디 기록 허브</Typography>
+        <Typography sx={{ fontSize: 14, opacity: 0.8, ml: 'auto', pr: 1.5, minWidth: 0 }} noWrap>
+          {props.studyName}
+        </Typography>
+      </Box>
+
+      <Drawer
+        open={open}
+        onClose={() => setOpen(false)}
+        PaperProps={{ sx: { width: SIDEBAR_WIDTH, bgcolor: colors.navy, border: 0 } }}
+        sx={{ display: { md: 'none' } }}
+      >
+        <SidebarContent {...props} onNavigate={() => setOpen(false)} />
+      </Drawer>
+    </>
   );
 }
