@@ -1,35 +1,56 @@
 import type { BestMember, CheckStatus, Submission, SubmissionInput } from '@/types/api';
+import { USE_MOCK } from '@/lib/config';
 import { api } from './client';
 import { isApiError } from './errors';
 
 // ───────── Submission ─────────
 
-export function createSubmission(weekId: number, input: SubmissionInput) {
-  return api.post<Submission>(`/api/v1/weeks/${weekId}/submissions`, input);
+type ServerSubmission = Pick<Submission, 'id' | 'weekId' | 'memberId' | 'submittedAt' | 'updatedAt'> & {
+  userId: number;
+  name: string;
+  url: string;
+  checked: boolean;
+};
+
+function toSubmission(data: Submission | ServerSubmission): Submission {
+  if (!('url' in data)) return data;
+  const { url, checked, name, ...submission } = data;
+  return { ...submission, originalLink: url, checkStatus: checked ? 'CHECKED' : 'UNCHECKED', nickname: name };
+}
+
+export async function createSubmission(weekId: number, input: SubmissionInput) {
+  const data = await api.post<Submission | ServerSubmission>(
+    `/api/v1/weeks/${weekId}/submissions`, USE_MOCK ? input : { url: input.originalLink },
+  );
+  return toSubmission(data);
 }
 
 /** 주차별 제출물 목록 (운영진용) */
-export function getWeekSubmissions(weekId: number) {
-  return api.get<Submission[]>(`/api/v1/weeks/${weekId}/submissions`);
+export async function getWeekSubmissions(weekId: number) {
+  const data = await api.get<(Submission | ServerSubmission)[]>(`/api/v1/weeks/${weekId}/submissions`);
+  return data.map(toSubmission);
 }
 
 /** 내 제출물. 아직 안 냈으면(404) null을 돌려줘요. */
 export async function getMySubmission(weekId: number): Promise<Submission | null> {
   try {
-    const result = await api.get<Submission | null>(`/api/v1/weeks/${weekId}/submissions/me`);
-    return result ?? null;
+    const result = await api.get<Submission | ServerSubmission | null>(`/api/v1/weeks/${weekId}/submissions/me`);
+    return result ? toSubmission(result) : null;
   } catch (e) {
     if (isApiError(e, 404)) return null;
     throw e;
   }
 }
 
-export function getSubmission(submissionId: number) {
-  return api.get<Submission>(`/api/v1/submissions/${submissionId}`);
+export async function getSubmission(submissionId: number) {
+  return toSubmission(await api.get<Submission | ServerSubmission>(`/api/v1/submissions/${submissionId}`));
 }
 
-export function updateSubmission(submissionId: number, input: SubmissionInput) {
-  return api.patch<Submission>(`/api/v1/submissions/${submissionId}`, input);
+export async function updateSubmission(submissionId: number, input: SubmissionInput) {
+  const data = await api.patch<Submission | ServerSubmission>(
+    `/api/v1/submissions/${submissionId}`, USE_MOCK ? input : { url: input.originalLink },
+  );
+  return toSubmission(data);
 }
 
 export function deleteSubmission(submissionId: number) {
@@ -37,8 +58,11 @@ export function deleteSubmission(submissionId: number) {
 }
 
 /** 운영진의 '수행 체크' */
-export function checkSubmission(submissionId: number, checkStatus: CheckStatus) {
-  return api.patch<Submission>(`/api/v1/submissions/${submissionId}/check`, { checkStatus });
+export async function checkSubmission(submissionId: number, checkStatus: CheckStatus) {
+  const data = await api.patch<Submission | ServerSubmission>(
+    `/api/v1/submissions/${submissionId}/check`, USE_MOCK ? { checkStatus } : { checked: checkStatus === 'CHECKED' },
+  );
+  return toSubmission(data);
 }
 
 // ───────── Best Member (주차별 우수 스터디원) ─────────

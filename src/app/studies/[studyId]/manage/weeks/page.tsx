@@ -3,12 +3,11 @@
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
-import { Box, Button, ButtonBase, Collapse, IconButton, Tooltip, Typography } from '@mui/material';
-import { useEffect, useState, type ReactNode } from 'react';
+import { Box, Button, ButtonBase, Collapse, IconButton, TextField, Tooltip, Typography } from '@mui/material';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { errorMessage } from '@/api/errors';
-import { createWeek, deleteMaterial, deleteWeek, getMaterials, getWeeks, updateWeek, uploadMaterial } from '@/api/weeks';
-import FileDropzone from '@/components/FileDropzone';
+import { createMaterial, createWeek, deleteMaterial, deleteWeek, getMaterials, getWeeks, updateWeek } from '@/api/weeks';
+import MaterialLinks from '@/components/MaterialLinks';
 import StatusChip, { type ChipKind } from '@/components/StatusChip';
 import { EmptyBox, ErrorBox, LoadingBox, PageHeader, Panel } from '@/components/ui';
 import { useStudy } from '@/contexts/StudyContext';
@@ -17,7 +16,7 @@ import { fmtMDDayTime } from '@/lib/dates';
 import { getWeekPhase, pickCurrentWeek, type WeekPhase } from '@/lib/stats';
 import { useAsync } from '@/lib/useAsync';
 import { colors } from '@/theme/theme';
-import type { SessionMaterial, Week, WeekInput } from '@/types/api';
+import type { MaterialLink, Week, WeekInput } from '@/types/api';
 import WeekDialog, { ASSIGNMENT_TYPES } from './WeekDialog';
 
 const PHASE_CHIP: Record<WeekPhase, ChipKind> = { CURRENT: 'CURRENT', DONE: 'ENDED', UPCOMING: 'UPCOMING' };
@@ -51,62 +50,61 @@ function Cell({ label, children }: { label: string; children: ReactNode }) {
 /** 주차별 세션 자료 (펼쳤을 때 불러와요) */
 function WeekMaterials({ weekId }: { weekId: number }) {
   const toast = useToast();
-  const [files, setFiles] = useState<SessionMaterial[] | null>(null);
+  const { data, loading, error, reload } = useAsync(() => getMaterials(weekId), [weekId]);
+  const [title, setTitle] = useState('');
+  const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    getMaterials(weekId)
-      .then((list) => !cancelled && setFiles(list))
-      .catch(() => !cancelled && setFiles([]));
-    return () => {
-      cancelled = true;
-    };
-  }, [weekId]);
-
-  const upload = async (list: File[]) => {
+  const register = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!title.trim() || !/^https?:\/\/\S+$/i.test(url.trim())) {
+      toast('자료 제목과 HTTP 또는 HTTPS 링크를 입력해 주세요.', 'warning');
+      return;
+    }
     setBusy(true);
     try {
-      for (const f of list) {
-        const m = await uploadMaterial(weekId, f);
-        setFiles((prev) => [...(prev ?? []), m]);
-      }
-      toast('세션 자료를 올렸어요.');
-    } catch (e) {
-      toast(errorMessage(e), 'error');
+      await createMaterial(weekId, { title: title.trim(), url: url.trim() });
+      setTitle('');
+      setUrl('');
+      await reload();
+      toast('세션 자료를 등록했어요.');
+    } catch (error) {
+      toast(errorMessage(error), 'error');
     } finally {
       setBusy(false);
     }
   };
 
-  const remove = async (m: SessionMaterial) => {
+  const remove = async (material: MaterialLink) => {
+    if (!window.confirm(`「${material.title}」 자료를 삭제할까요?`)) return;
+    setBusy(true);
     try {
-      await deleteMaterial(m.id);
-      setFiles((prev) => (prev ?? []).filter((x) => x.id !== m.id));
-    } catch (e) {
-      toast(errorMessage(e), 'error');
+      await deleteMaterial(material.id);
+      await reload();
+      toast('세션 자료를 삭제했어요.');
+    } catch (error) {
+      toast(errorMessage(error), 'error');
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
     <Box sx={{ minWidth: 0 }}>
       <Typography sx={{ fontSize: 13, color: colors.textSub, fontWeight: 600, mb: 1, px: 0.5 }}>세션 자료</Typography>
-      <FileDropzone compact busy={busy} onFiles={(f) => void upload(f)} hint={'PDF · MD · TXT\n파일을 끌어다 놓기'} />
-      {files?.map((m) => (
-        <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.75, fontSize: 12 }}>
-          <InsertDriveFileOutlinedIcon sx={{ fontSize: 14, color: colors.textMuted }} />
-          <Box component="span" sx={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={m.originalFilename}>
-            {m.originalFilename}
-          </Box>
-          <IconButton size="small" aria-label="자료 삭제" onClick={() => void remove(m)} sx={{ p: 0.25 }}>
-            <DeleteOutlineIcon sx={{ fontSize: 14 }} />
-          </IconButton>
-        </Box>
-      ))}
+      <Box component="form" onSubmit={register} sx={{ display: 'grid', gap: 0.75 }}>
+        <TextField size="small" label="자료 제목" value={title} required disabled={busy}
+          onChange={(event) => setTitle(event.target.value)} slotProps={{ htmlInput: { maxLength: 100 } }} />
+        <TextField size="small" label="자료 링크" placeholder="https://" type="url" value={url} required disabled={busy}
+          onChange={(event) => setUrl(event.target.value)} slotProps={{ htmlInput: { maxLength: 2048 } }} />
+        <Button type="submit" size="small" variant="outlined" disabled={busy}>자료 등록</Button>
+      </Box>
+      {loading && !data && <LoadingBox minHeight={56} />}
+      {error && <ErrorBox error={error} onRetry={() => void reload()} />}
+      {!error && <MaterialLinks key={weekId} materials={data ?? []} busy={busy} onDelete={remove} />}
     </Box>
   );
 }
-
 /** 피그마 Student-week-management (주차·세션 관리) */
 export default function WeeksPage() {
   const { studyId, study } = useStudy();
@@ -144,7 +142,7 @@ export default function WeeksPage() {
   };
 
   const handleDelete = async (w: Week) => {
-    if (!window.confirm(`${w.weekNo}주차를 삭제할까요? 이 주차의 제출물과 자료도 함께 지워져요.`)) return;
+    if (!window.confirm(`${w.weekNo}주차를 삭제할까요? 제출물이나 자료가 남아 있으면 삭제할 수 없어요.`)) return;
     try {
       await deleteWeek(w.id);
       toast(`${w.weekNo}주차를 삭제했어요.`);

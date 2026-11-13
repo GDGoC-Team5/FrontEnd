@@ -311,19 +311,21 @@ const routes: Array<[Method, string, Handler]> = [
   }],
 
   // Material
-  ['POST', '/api/v1/weeks/:weekId/materials', ({ db, params, form }) => {
+  ['POST', '/api/v1/weeks/:weekId/materials', ({ db, params, body }) => {
     const week = findWeek(db, Number(params.weekId));
-    const { user } = requireMember(db, week.studyId);
-    const file = form instanceof FormData ? form.get('file') : null;
-    if (!(file instanceof File)) throw new ApiError(400, '파일이 없어요.');
+    const { user, member } = requireMember(db, week.studyId);
+    if (member.role !== 'MANAGER') throw new ApiError(403, '운영진만 자료를 등록할 수 있어요.');
+    const title = str(body.title)?.trim() ?? '';
+    const url = str(body.url)?.trim() ?? '';
+    if (!title || title.length > 100 || url.length > 2048 || !/^https?:\/\/\S+$/i.test(url)) {
+      throw new ApiError(400, '자료 제목과 HTTP 또는 HTTPS 링크를 확인해 주세요.');
+    }
     const material: SessionMaterial = {
       id: nextId(),
       weekId: week.id,
       uploaderId: user.id,
-      originalFilename: file.name,
-      contentType: file.type,
-      fileSize: file.size,
-      downloadUrl: null,
+      originalFilename: title,
+      downloadUrl: url,
       createdAt: now(),
     };
     db.materials.push(material);
@@ -343,8 +345,8 @@ const routes: Array<[Method, string, Handler]> = [
   ['DELETE', '/api/v1/materials/:materialId', ({ db, params }) => {
     const m = db.materials.find((x) => x.id === Number(params.materialId));
     if (!m) throw new ApiError(404, '자료를 찾을 수 없어요.');
-    const { user, member } = requireMember(db, findWeek(db, m.weekId).studyId);
-    if (member.role !== 'MANAGER' && m.uploaderId !== user.id) throw new ApiError(403, '올린 사람이나 운영진만 지울 수 있어요.');
+    const { member } = requireMember(db, findWeek(db, m.weekId).studyId);
+    if (member.role !== 'MANAGER') throw new ApiError(403, '운영진만 자료를 삭제할 수 있어요.');
     db.materials = db.materials.filter((x) => x.id !== m.id);
     return null;
   }],

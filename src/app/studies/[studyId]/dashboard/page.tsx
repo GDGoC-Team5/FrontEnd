@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useStudy } from '@/contexts/StudyContext';
 import { useToast } from '@/contexts/ToastContext';
 import { dDayLabel, fmtMDDayTime } from '@/lib/dates';
+import { USE_MOCK } from '@/lib/config';
 import { computeStudentStats, isDue } from '@/lib/stats';
 import { useAsync } from '@/lib/useAsync';
 import { colors } from '@/theme/theme';
@@ -36,7 +37,7 @@ export default function StudentDashboardPage() {
 
   const handleSubmitLink = async (e: FormEvent) => {
     e.preventDefault();
-    if (!current) return;
+    if (!current || (!USE_MOCK && current.assignmentType !== 'LINK')) return;
     if (!/^https?:\/\//.test(link.trim())) {
       toast('https:// 로 시작하는 링크를 넣어 주세요.', 'warning');
       return;
@@ -104,10 +105,10 @@ export default function StudentDashboardPage() {
       )}
 
       {/* 링크드인 링크 제출 */}
-      {current && (
-        <Panel title="링크드인 링크 제출" sx={{ mb: 5 }}>
+      {current && (USE_MOCK || current.assignmentType === 'LINK') && (
+        <Panel title="과제 링크 제출" sx={{ mb: 5 }}>
           <Box component="form" onSubmit={handleSubmitLink} sx={{ display: 'flex', gap: 2.5 }}>
-            <TextField fullWidth placeholder="https://www.linkedin.com/posts/..." value={link} onChange={(e) => setLink(e.target.value)} />
+            <TextField fullWidth placeholder="https://" value={link} onChange={(e) => setLink(e.target.value)} />
             <Button type="submit" variant="contained" disabled={saving} sx={{ minWidth: 116, fontSize: 18 }}>
               {saving ? '저장 중…' : mine ? '수정하기' : '제출하기'}
             </Button>
@@ -120,7 +121,7 @@ export default function StudentDashboardPage() {
                 : '제출 기한 내 수정이 가능합니다'}
             {' · '}
             <Link href={`/studies/${studyId}/submit`} style={{ color: colors.primary }}>
-              본문까지 자세히 쓰기
+              제출 상세 및 세션 자료
             </Link>
           </Typography>
         </Panel>

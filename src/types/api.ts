@@ -22,7 +22,7 @@ export interface User {
 /** study_tag */
 export interface StudyTag {
   id: number;
-  studyId: number;
+  studyId?: number;
   name: string;
   description?: string | null;
   createdAt?: string;
@@ -64,7 +64,7 @@ export interface StudyDetail {
 
 /** study_member (+ 화면에 보여줄 닉네임) */
 export interface StudyMember {
-  /** study_member.id — submission.member_id 가 이 값을 가리켜요 */
+  /** 화면의 멤버 키. 실제 멤버 목록에는 userId만 내려온다. */
   id: number;
   studyId: number;
   userId: number;
@@ -122,6 +122,7 @@ export type CheckStatus = 'UNCHECKED' | 'CHECKED';
 export interface Submission {
   id: number;
   weekId: number;
+  userId?: number;
   /** study_member.id */
   memberId: number;
   /** 목록 화면용 — 백엔드가 같이 내려주면 편해요 */
@@ -141,6 +142,12 @@ export interface SubmissionInput {
   title?: string | null;
   content?: string | null;
   originalLink?: string | null;
+}
+
+export interface MaterialLink {
+  id: number;
+  title: string;
+  url: string | null;
 }
 
 /** weekly_best_member */

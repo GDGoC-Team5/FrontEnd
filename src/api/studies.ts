@@ -1,5 +1,8 @@
 import type { StudyDetail, StudyMember, StudyRole, StudySummary, StudyTag } from '@/types/api';
+import { USE_MOCK } from '@/lib/config';
 import { api } from './client';
+
+const studiesPath = USE_MOCK ? '/api/v1/studies' : '/api/studies';
 
 // ───────── Study ─────────
 
@@ -12,20 +15,21 @@ export interface CreateStudyInput {
 }
 
 export function createStudy(input: CreateStudyInput) {
-  return api.post<StudyDetail>('/api/v1/studies', input);
+  const { name, description } = input;
+  return api.post<StudyDetail>(studiesPath, USE_MOCK ? input : { name, description });
 }
 
 /** 내가 참여한 스터디 목록 */
 export function getMyStudies() {
-  return api.get<StudySummary[]>('/api/v1/studies');
+  return api.get<StudySummary[]>(studiesPath);
 }
 
 export function getStudy(studyId: number | string) {
-  return api.get<StudyDetail>(`/api/v1/studies/${studyId}`);
+  return api.get<StudyDetail>(`${studiesPath}/${studyId}`);
 }
 
 export function updateStudy(studyId: number | string, input: { name?: string; description?: string }) {
-  return api.patch<StudyDetail>(`/api/v1/studies/${studyId}`, input);
+  return api.patch<StudyDetail>(`${studiesPath}/${studyId}`, input);
 }
 
 export function deleteStudy(studyId: number | string) {
@@ -34,7 +38,7 @@ export function deleteStudy(studyId: number | string) {
 
 /** 초대 코드로 가입 */
 export function joinStudy(inviteCode: string) {
-  return api.post<StudyDetail>('/api/v1/studies/join', { inviteCode });
+  return api.post<StudyDetail>(`${studiesPath}/join`, { inviteCode });
 }
 
 export function reissueInviteCode(studyId: number | string) {
@@ -44,7 +48,11 @@ export function reissueInviteCode(studyId: number | string) {
 // ───────── Member ─────────
 
 export function getMembers(studyId: number | string) {
-  return api.get<StudyMember[]>(`/api/v1/studies/${studyId}/members`);
+  const path = `${studiesPath}/${studyId}/members`;
+  if (USE_MOCK) return api.get<StudyMember[]>(path);
+  return api.get<{ userId: number; name: string; role: StudyRole }[]>(path).then((members) =>
+    members.map(({ userId, name, role }) => ({ id: userId, studyId: Number(studyId), userId, nickname: name, role })),
+  );
 }
 
 export function getMember(studyId: number | string, memberId: number) {
@@ -66,13 +74,13 @@ export function leaveStudy(studyId: number | string) {
 // ───────── Tag (스터디 속성) ─────────
 
 export function getTags(studyId: number | string) {
-  return api.get<StudyTag[]>(`/api/v1/studies/${studyId}/tags`);
+  return api.get<StudyTag[]>(`${studiesPath}/${studyId}/tags`);
 }
 
 export function addTag(studyId: number | string, input: { name: string; description?: string }) {
-  return api.post<StudyTag>(`/api/v1/studies/${studyId}/tags`, input);
+  return api.post<StudyTag>(`${studiesPath}/${studyId}/tags`, USE_MOCK ? input : { name: input.name });
 }
 
 export function deleteTag(studyId: number | string, tagId: number) {
-  return api.delete(`/api/v1/studies/${studyId}/tags/${tagId}`);
+  return api.delete(`${studiesPath}/${studyId}/tags/${tagId}`);
 }
