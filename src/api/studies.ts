@@ -33,7 +33,7 @@ export function updateStudy(studyId: number | string, input: { name?: string; de
 }
 
 export function deleteStudy(studyId: number | string) {
-  return api.delete(`/api/v1/studies/${studyId}`);
+  return api.delete(`${studiesPath}/${studyId}`);
 }
 
 /** 초대 코드로 가입 */
@@ -42,7 +42,7 @@ export function joinStudy(inviteCode: string) {
 }
 
 export function reissueInviteCode(studyId: number | string) {
-  return api.post<{ inviteCode: string }>(`/api/v1/studies/${studyId}/invite-code`);
+  return api.post<{ inviteCode: string }>(`${studiesPath}/${studyId}/invite-code`);
 }
 
 // ───────── Member ─────────
@@ -50,25 +50,33 @@ export function reissueInviteCode(studyId: number | string) {
 export function getMembers(studyId: number | string) {
   const path = `${studiesPath}/${studyId}/members`;
   if (USE_MOCK) return api.get<StudyMember[]>(path);
-  return api.get<{ userId: number; name: string; role: StudyRole }[]>(path).then((members) =>
-    members.map(({ userId, name, role }) => ({ id: userId, studyId: Number(studyId), userId, nickname: name, role })),
-  );
+  return api.get<ServerStudyMember[]>(path).then((members) => members.map((member) => toStudyMember(studyId, member)));
 }
 
-export function getMember(studyId: number | string, memberId: number) {
-  return api.get<StudyMember>(`/api/v1/studies/${studyId}/members/${memberId}`);
+type ServerStudyMember = { userId: number; name: string; role: StudyRole };
+
+function toStudyMember(studyId: number | string, { userId, name, role }: ServerStudyMember): StudyMember {
+  return { id: userId, studyId: Number(studyId), userId, nickname: name, role };
 }
 
-export function changeMemberRole(studyId: number | string, memberId: number, role: StudyRole) {
-  return api.patch<StudyMember>(`/api/v1/studies/${studyId}/members/${memberId}/role`, { role });
+export async function getMember(studyId: number | string, memberId: number) {
+  const path = `${studiesPath}/${studyId}/members/${memberId}`;
+  if (USE_MOCK) return api.get<StudyMember>(path);
+  return toStudyMember(studyId, await api.get<ServerStudyMember>(path));
+}
+
+export async function changeMemberRole(studyId: number | string, memberId: number, role: StudyRole) {
+  const path = `${studiesPath}/${studyId}/members/${memberId}/role`;
+  if (USE_MOCK) return api.patch<StudyMember>(path, { role });
+  return toStudyMember(studyId, await api.patch<ServerStudyMember>(path, { role }));
 }
 
 export function kickMember(studyId: number | string, memberId: number) {
-  return api.delete(`/api/v1/studies/${studyId}/members/${memberId}`);
+  return api.delete(`${studiesPath}/${studyId}/members/${memberId}`);
 }
 
 export function leaveStudy(studyId: number | string) {
-  return api.delete(`/api/v1/studies/${studyId}/members/me`);
+  return api.delete(`${studiesPath}/${studyId}/members/me`);
 }
 
 // ───────── Tag (스터디 속성) ─────────

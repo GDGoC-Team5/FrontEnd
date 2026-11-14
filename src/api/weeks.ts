@@ -21,7 +21,8 @@ export function getWeek(weekId: number) {
 }
 
 export function updateWeek(weekId: number, input: Partial<WeekInput>) {
-  return api.patch<Week>(`${weekPrefix}/weeks/${weekId}`, input);
+  const { assignmentType, ...fields } = input;
+  return api.patch<Week>(`${weekPrefix}/weeks/${weekId}`, USE_MOCK ? { ...fields, assignmentType } : fields);
 }
 
 export function deleteWeek(weekId: number) {

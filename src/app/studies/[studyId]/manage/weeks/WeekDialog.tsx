@@ -14,9 +14,7 @@ export const ASSIGNMENT_TYPES = [
   { value: 'FILE', label: '파일 제출' },
   { value: 'LINK_AND_FILE', label: '링크 및 파일 제출' },
 ];
-const availableTypes = USE_MOCK ? ASSIGNMENT_TYPES : ASSIGNMENT_TYPES.filter(({ value }) =>
-  value === 'LINK' || value === 'FILE' || value === 'LINK_AND_FILE',
-);
+
 
 interface FormState {
   weekNo: string;
@@ -60,6 +58,8 @@ export default function WeekDialog({
     });
   }, [open, week, defaultWeekNo]);
 
+  const availableTypes = USE_MOCK ? ASSIGNMENT_TYPES : ASSIGNMENT_TYPES.filter(({ value }) => value === 'LINK' || value === week?.assignmentType);
+
   const set = (key: keyof FormState) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const handleSubmit = async () => {
@@ -74,9 +74,9 @@ export default function WeekDialog({
         weekNo: Number(form.weekNo),
         title: form.title.trim(),
         assignmentType: form.assignmentType,
-        assignmentDescription: form.assignmentDescription.trim() || null,
+        assignmentDescription: form.assignmentDescription.trim(),
         sessionAt: fromInputValue(form.sessionAt),
-        location: form.location.trim() || null,
+        location: form.location.trim(),
         deadline: fromInputValue(form.deadline),
       });
     } catch (e) {

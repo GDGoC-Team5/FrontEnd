@@ -1,4 +1,4 @@
-import type { BestMember, CheckStatus, Submission, SubmissionInput } from '@/types/api';
+import type { BestMember, CheckStatus, StudyMember, Submission, SubmissionInput } from '@/types/api';
 import { USE_MOCK } from '@/lib/config';
 import { api } from './client';
 import { isApiError } from './errors';
@@ -67,25 +67,45 @@ export async function checkSubmission(submissionId: number, checkStatus: CheckSt
 
 // ───────── Best Member (주차별 우수 스터디원) ─────────
 
-/** 아직 선정 안 했으면(404) null */
+const bestMemberPrefix = USE_MOCK ? '/api/v1/weeks' : '/api/weeks';
+type ServerBestMember = Pick<BestMember, 'id' | 'weekId' | 'reason'> & {
+  userId: number;
+  name: string;
+  selectedAt: string;
+};
+
+function toBestMember(best: BestMember | ServerBestMember): BestMember {
+  if (!('userId' in best)) return best;
+  const { userId, name, selectedAt, ...rest } = best;
+  return { ...rest, memberId: userId, nickname: name, createdAt: selectedAt };
+}
+
+/** 아직 선정 안 했으면 null */
 export async function getBestMember(weekId: number): Promise<BestMember | null> {
   try {
-    const result = await api.get<BestMember | null>(`/api/v1/weeks/${weekId}/best-member`);
-    return result ?? null;
+    const result = await api.get<BestMember | ServerBestMember | null>(`${bestMemberPrefix}/${weekId}/best-member`);
+    return result ? toBestMember(result) : null;
   } catch (e) {
     if (isApiError(e, 404)) return null;
     throw e;
   }
 }
 
-export function selectBestMember(weekId: number, input: { memberId: number; reason?: string }) {
-  return api.post<BestMember>(`/api/v1/weeks/${weekId}/best-member`, input);
+interface BestMemberInput {
+  member: Pick<StudyMember, 'id' | 'userId'>;
+  reason?: string;
 }
 
-export function updateBestMember(weekId: number, input: { memberId: number; reason?: string }) {
-  return api.patch<BestMember>(`/api/v1/weeks/${weekId}/best-member`, input);
+export async function selectBestMember(weekId: number, { member, reason }: BestMemberInput) {
+  const body = USE_MOCK ? { memberId: member.id, reason } : { userId: member.userId, reason };
+  return toBestMember(await api.post<BestMember | ServerBestMember>(`${bestMemberPrefix}/${weekId}/best-member`, body));
+}
+
+export async function updateBestMember(weekId: number, { member, reason }: BestMemberInput) {
+  const body = USE_MOCK ? { memberId: member.id, reason } : { userId: member.userId, reason };
+  return toBestMember(await api.patch<BestMember | ServerBestMember>(`${bestMemberPrefix}/${weekId}/best-member`, body));
 }
 
 export function cancelBestMember(weekId: number) {
-  return api.delete(`/api/v1/weeks/${weekId}/best-member`);
+  return api.delete(`${bestMemberPrefix}/${weekId}/best-member`);
 }

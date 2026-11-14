@@ -52,7 +52,7 @@ export interface StudyDetail {
   id: number;
   name: string;
   description?: string | null;
-  /** 운영진에게만 내려온다고 가정 */
+  /** 상세 응답의 스터디 초대 코드 */
   inviteCode?: string | null;
   createdBy?: number;
   myRole?: StudyRole;
@@ -154,7 +154,7 @@ export interface MaterialLink {
 export interface BestMember {
   id: number;
   weekId: number;
-  /** study_member.id */
+  /** 실제 API에서는 userId, 목 API에서는 study_member.id를 화면 키로 쓴다. */
   memberId: number;
   nickname?: string;
   reason?: string | null;
