@@ -3,7 +3,7 @@
 import { Box, Checkbox, Link as MuiLink, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { useState } from 'react';
 import { errorMessage } from '@/api/errors';
-import { checkSubmission, getWeekSubmissions } from '@/api/submissions';
+import { checkSubmission, getSubmission, getWeekSubmissions } from '@/api/submissions';
 import { getWeeks } from '@/api/weeks';
 import StatusChip from '@/components/StatusChip';
 import SubmissionDialog from '@/components/SubmissionDialog';
@@ -30,18 +30,28 @@ export default function CheckPage() {
   const [detail, setDetail] = useState<Submission | null>(null);
   const [pending, setPending] = useState<number | null>(null);
 
-  const targets = members.filter((m) => m.role === 'MEMBER');
   const subs = subsQ.data ?? [];
+  const targets = members.filter((m) => m.role === 'MEMBER' || subs.some((s) =>
+    s.userId !== undefined ? s.userId === m.userId : s.memberId === m.id,
+  ));
+
+  const openDetail = async (id: number) => {
+    try {
+      setDetail(await getSubmission(id));
+    } catch (e) {
+      toast(errorMessage(e), 'error');
+    }
+  };
 
   const toggleCheck = async (sub: Submission) => {
+    if (pending !== null || subsQ.loading) return;
     const next = sub.checkStatus === 'CHECKED' ? 'UNCHECKED' : 'CHECKED';
     setPending(sub.id);
-    // 먼저 화면부터 바꾸고(빠르게 보이게), 실패하면 되돌려요
-    subsQ.setData(subs.map((s) => (s.id === sub.id ? { ...s, checkStatus: next } : s)));
     try {
-      await checkSubmission(sub.id, next);
+      const saved = await checkSubmission(sub.id, next);
+      subsQ.setData((previous) => previous?.map((item) => item.id === saved.id ? saved : item));
+      setDetail((previous) => previous?.id === saved.id ? saved : previous);
     } catch (e) {
-      subsQ.setData(subs);
       toast(errorMessage(e), 'error');
     } finally {
       setPending(null);
@@ -55,14 +65,18 @@ export default function CheckPage() {
 
   return (
     <Box>
-      <PageHeader title="과제 수행 체크" actions={<WeekSelect weeks={weeksQ.data ?? []} value={weekId} onChange={setWeekId} />} />
+      <PageHeader title="과제 수행 체크" actions={<WeekSelect weeks={weeksQ.data ?? []} value={weekId} onChange={(id) => {
+        subsQ.setData(undefined);
+        setDetail(null);
+        setWeekId(id);
+      }} disabled={pending !== null} />} />
       <Panel
         title="멤버별 제출 이력"
         action={week && <Typography sx={{ color: colors.textMuted, fontSize: 14 }}>제출 {subs.length}/{targets.length} · 체크 {checkedCount}</Typography>}
       >
         {!week ? (
           <EmptyBox>주차가 없어요.</EmptyBox>
-        ) : subsQ.loading && !subsQ.data ? (
+        ) : subsQ.loading ? (
           <LoadingBox minHeight={200} />
         ) : subsQ.error ? (
           <ErrorBox error={subsQ.error} onRetry={() => void subsQ.reload()} />
@@ -82,13 +96,13 @@ export default function CheckPage() {
               </TableHead>
               <TableBody>
                 {targets.map((m) => {
-                  const sub = subs.find((s) => s.memberId === m.id) ?? null;
+                  const sub = subs.find((s) => s.userId !== undefined ? s.userId === m.userId : s.memberId === m.id) ?? null;
                   const state = getSubmitState(week, sub);
                   return (
                     <TableRow key={m.id} hover>
                       <TableCell>
                         {sub ? (
-                          <MuiLink component="button" type="button" underline="hover" onClick={() => setDetail(sub)} sx={{ color: 'inherit', font: 'inherit' }}>
+                          <MuiLink component="button" type="button" underline="hover" onClick={() => void openDetail(sub.id)} sx={{ color: 'inherit', font: 'inherit' }}>
                             {m.nickname}
                           </MuiLink>
                         ) : (
@@ -111,7 +125,7 @@ export default function CheckPage() {
                       <TableCell align="center">
                         <Checkbox
                           checked={sub?.checkStatus === 'CHECKED'}
-                          disabled={!sub || pending === sub.id}
+                          disabled={!sub || pending !== null || subsQ.loading}
                           onChange={() => sub && void toggleCheck(sub)}
                           inputProps={{ 'aria-label': `${m.nickname} 수행 체크` }}
                         />
@@ -125,7 +139,7 @@ export default function CheckPage() {
         )}
       </Panel>
 
-      <SubmissionDialog submission={detail} nickname={members.find((m) => m.id === detail?.memberId)?.nickname} onClose={() => setDetail(null)} />
+      <SubmissionDialog submission={detail} nickname={detail?.nickname} onClose={() => setDetail(null)} />
     </Box>
   );
 }

@@ -35,7 +35,7 @@ async function ensureCsrfToken(): Promise<string | null> {
   const existing = readCookie(CSRF_COOKIE_NAME);
   if (existing) return existing;
   try {
-    await fetch(`${API_BASE_URL}/api/v1/users/me`, { credentials: 'include' });
+    await fetch(`${API_BASE_URL}/api/users/me`, { credentials: 'include' });
   } catch {
     // 서버가 꺼져 있으면 아래 실제 요청에서 에러가 나요
   }
@@ -50,6 +50,10 @@ function handleAuthError(err: ApiError, opts: RequestOptions) {
 }
 
 function extractMessage(data: unknown): string | null {
+  if (data && typeof data === 'object' && 'error' in data) {
+    const message = extractMessage(data.error);
+    if (message) return message;
+  }
   if (data && typeof data === 'object' && 'message' in data) {
     const msg = (data as { message?: unknown }).message;
     if (typeof msg === 'string' && msg.trim()) return msg;

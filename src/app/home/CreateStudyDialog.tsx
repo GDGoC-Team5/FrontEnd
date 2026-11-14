@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { errorMessage } from '@/api/errors';
 import { addTag, createStudy } from '@/api/studies';
 import { Field } from '@/components/ui';
+import { useToast } from '@/contexts/ToastContext';
+import { USE_MOCK } from '@/lib/config';
 import { colors } from '@/theme/theme';
 import type { StudyDetail } from '@/types/api';
 
@@ -18,6 +20,7 @@ export default function CreateStudyDialog({
   onClose: () => void;
   onCreated: (study: StudyDetail) => void;
 }) {
+  const toast = useToast();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [tagText, setTagText] = useState('');
@@ -26,10 +29,7 @@ export default function CreateStudyDialog({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const tags = tagText
-    .split(',')
-    .map((t) => t.trim())
-    .filter(Boolean);
+  const tags = [...new Set(tagText.split(',').map((tag) => tag.trim()).filter(Boolean))];
 
   const reset = () => {
     setName('');
@@ -45,6 +45,10 @@ export default function CreateStudyDialog({
       setError('스터디 이름을 입력해 주세요.');
       return;
     }
+    if (tags.some((tag) => tag.length > 30)) {
+      setError('태그는 30자까지 입력할 수 있어요.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -54,9 +58,12 @@ export default function CreateStudyDialog({
         totalWeeks: Number(totalWeeks) || undefined,
         capacity: Number(capacity) || undefined,
       });
-      // '스터디 속성'은 태그 API로 따로 저장해요
       for (const tag of tags) {
-        await addTag(study.id, { name: tag });
+        try {
+          await addTag(study.id, { name: tag });
+        } catch (e) {
+          toast(`태그 ‘${tag}’를 추가하지 못했어요. ${errorMessage(e)}`, 'warning');
+        }
       }
       reset();
       onCreated(study);
@@ -92,14 +99,14 @@ export default function CreateStudyDialog({
               </Box>
             )}
           </Field>
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+          {USE_MOCK && <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
             <Field label="총 주차">
               <TextField fullWidth type="number" value={totalWeeks} onChange={(e) => setTotalWeeks(e.target.value)} />
             </Field>
             <Field label="모집 인원">
               <TextField fullWidth type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
             </Field>
-          </Box>
+          </Box>}
 
           <Box sx={{ bgcolor: '#d7d6fc', borderRadius: '9px', px: 3, py: 2, fontSize: 15, color: '#1e1b4b', textAlign: 'center' }}>
             만든 사람은 자동으로 <b>운영진</b>이 됩니다. 스터디원에게 참여코드를 전송해 주세요.

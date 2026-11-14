@@ -9,15 +9,18 @@ export default function WeekSelect({
   value,
   onChange,
   highlight = false,
+  disabled = false,
 }: {
   weeks: Week[];
   value: number | null;
   onChange: (weekId: number) => void;
   highlight?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Select
       size="small"
+      disabled={disabled}
       value={value ?? ''}
       onChange={(e) => onChange(Number(e.target.value))}
       displayEmpty

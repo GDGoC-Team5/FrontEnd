@@ -15,7 +15,10 @@ export default function MyHistoryTable({ rows, onRowClick }: { rows: MyWeekRow[]
           <TableCell>제목</TableCell>
           <TableCell sx={{ width: 84 }}>제출일</TableCell>
           <TableCell sx={{ width: 96 }} align="center">
-            상태
+            제출 상태
+          </TableCell>
+          <TableCell sx={{ width: 100 }} align="center">
+            운영진 확인
           </TableCell>
         </TableRow>
       </TableHead>
@@ -32,6 +35,9 @@ export default function MyHistoryTable({ rows, onRowClick }: { rows: MyWeekRow[]
             <TableCell>{r.submission ? fmtMD(r.submission.submittedAt) : '-'}</TableCell>
             <TableCell align="center">
               <StatusChip kind={r.state} size="sm" />
+            </TableCell>
+            <TableCell align="center">
+              {r.submission ? (r.submission.checkStatus === 'CHECKED' ? '확인 완료' : '확인 대기') : '-'}
             </TableCell>
           </TableRow>
         ))}

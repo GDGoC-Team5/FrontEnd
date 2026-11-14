@@ -4,10 +4,10 @@ import { Box, Button, ButtonBase, Chip, MenuItem, Select, Table, TableBody, Tabl
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { errorMessage } from '@/api/errors';
-import { addTag, changeMemberRole, deleteStudy, deleteTag, getMyStudies, getStudy, kickMember, reissueInviteCode, updateStudy } from '@/api/studies';
+import { addTag, changeMemberRole, deleteStudy, deleteTag, getMyStudies, getStudy, getTags, kickMember, reissueInviteCode, updateStudy } from '@/api/studies';
 import InviteCodeDialog from '@/components/InviteCodeDialog';
 import StatusChip from '@/components/StatusChip';
-import { Field, PageHeader, Panel } from '@/components/ui';
+import { ErrorBox, Field, PageHeader, Panel } from '@/components/ui';
 import { useStudy } from '@/contexts/StudyContext';
 import { useToast } from '@/contexts/ToastContext';
 import { fmtMD } from '@/lib/dates';
@@ -28,7 +28,8 @@ export default function StudyManagePage() {
 
   const [name, setName] = useState(study.name);
   const [description, setDescription] = useState(study.description ?? '');
-  const [tags, setTags] = useState<StudyTag[]>(study.tags ?? []);
+  const tagsQuery = useAsync(() => getTags(studyId), [studyId]);
+  const tags = tagsQuery.data ?? [];
   const [newTag, setNewTag] = useState('');
   const [saving, setSaving] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -38,7 +39,6 @@ export default function StudyManagePage() {
   useEffect(() => {
     setName(study.name);
     setDescription(study.description ?? '');
-    setTags(study.tags ?? []);
     setInviteCode(study.inviteCode);
   }, [study]);
 
@@ -88,8 +88,8 @@ export default function StudyManagePage() {
     const tagName = newTag.trim();
     if (!tagName) return;
     try {
-      const tag = await addTag(studyId, { name: tagName });
-      setTags((prev) => [...prev, tag]);
+      await addTag(studyId, { name: tagName });
+      await tagsQuery.reload();
       setNewTag('');
     } catch (e) {
       toast(errorMessage(e), 'error');
@@ -99,7 +99,7 @@ export default function StudyManagePage() {
   const onDeleteTag = async (tag: StudyTag) => {
     try {
       await deleteTag(studyId, tag.id);
-      setTags((prev) => prev.filter((t) => t.id !== tag.id));
+      await tagsQuery.reload();
     } catch (e) {
       toast(errorMessage(e), 'error');
     }
@@ -243,7 +243,9 @@ export default function StudyManagePage() {
 
       <Panel title="스터디 속성 (태그)" sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-          {tags.length === 0 && <Typography sx={{ color: colors.textSub }}>아직 태그가 없어요.</Typography>}
+          {tagsQuery.error && <ErrorBox error={tagsQuery.error} onRetry={() => void tagsQuery.reload()} />}
+          {tagsQuery.loading && <Typography sx={{ color: colors.textSub }}>태그를 불러오는 중이에요.</Typography>}
+          {!tagsQuery.loading && !tagsQuery.error && tags.length === 0 && <Typography sx={{ color: colors.textSub }}>아직 태그가 없어요.</Typography>}
           {tags.map((t) => (
             <Chip key={t.id} label={t.name} onDelete={() => void onDeleteTag(t)} sx={{ bgcolor: colors.primarySoft, color: colors.primary }} />
           ))}

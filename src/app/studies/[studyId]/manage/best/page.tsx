@@ -41,14 +41,15 @@ export default function BestMemberPage() {
   const best = dataQ.data?.best ?? null;
   const memberOf = (memberId: number) => members.find((m) => m.id === memberId);
   const bestMember = best ? memberOf(best.memberId) : undefined;
+  const memberKey = (submission: Submission) => submission.userId ?? submission.memberId;
   const targets = members.filter((m) => m.role === 'MEMBER');
-  const missingCount = targets.filter((m) => !subs.some((s) => s.memberId === m.id)).length;
+  const missingCount = targets.filter((m) => !subs.some((s) => memberKey(s) === m.id)).length;
 
   const confirmPick = async () => {
     if (!picking || !weekId) return;
     setSaving(true);
     try {
-      const input = { memberId: picking.member.id, reason: picking.reason.trim() };
+      const input = { member: picking.member, reason: picking.reason.trim() };
       if (best) await updateBestMember(weekId, input);
       else await selectBestMember(weekId, input);
       toast(`${picking.member.nickname}님을 ${week?.weekNo}주차 우수 스터디원으로 선정했어요 🏅`);
@@ -125,8 +126,8 @@ export default function BestMemberPage() {
         <>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, minmax(0, 1fr))' }, gap: 1 }}>
             {subs.map((sub) => {
-              const m = memberOf(sub.memberId);
-              const isBest = best?.memberId === sub.memberId;
+              const m = memberOf(memberKey(sub));
+              const isBest = best?.memberId === memberKey(sub);
               return (
                 <Box
                   key={sub.id}
@@ -197,7 +198,7 @@ export default function BestMemberPage() {
         </DialogActions>
       </Dialog>
 
-      <SubmissionDialog submission={detail} nickname={detail ? memberOf(detail.memberId)?.nickname : undefined} onClose={() => setDetail(null)} />
+      <SubmissionDialog submission={detail} nickname={detail ? memberOf(memberKey(detail))?.nickname : undefined} onClose={() => setDetail(null)} />
     </Box>
   );
 }

@@ -4,7 +4,8 @@ import { Box, Button, ButtonBase, LinearProgress, TextField, Typography } from '
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { errorMessage } from '@/api/errors';
-import { getMyStudies, joinStudy } from '@/api/studies';
+import { loadHomeStudies } from '@/api/dashboard';
+import { joinStudy } from '@/api/studies';
 import InviteCodeDialog from '@/components/InviteCodeDialog';
 import StatusChip from '@/components/StatusChip';
 import { EmptyBox, ErrorBox, LoadingBox, PageHeader, Panel } from '@/components/ui';
@@ -53,7 +54,7 @@ function StudyCard({ study, onOpen }: { study: StudySummary; onOpen: () => void 
       <Typography sx={{ fontSize: 21, fontWeight: 700, mt: 1.5 }}>{study.name}</Typography>
       {meta && <Typography sx={{ fontSize: 13, color: colors.textMuted, mt: 0.75 }}>{meta}</Typography>}
 
-      {isManager ? (
+      {isManager ? (study.currentWeekTargetCount !== undefined && (
         <Box sx={{ mt: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, mb: 1 }}>
             <Typography component="span" sx={{ fontSize: 13, color: colors.textMuted }}>
@@ -69,7 +70,7 @@ function StudyCard({ study, onOpen }: { study: StudySummary; onOpen: () => void 
             sx={{ height: 8, borderRadius: 99, bgcolor: '#e9e9ef', '& .MuiLinearProgress-bar': { bgcolor: colors.navy, borderRadius: 99 } }}
           />
         </Box>
-      ) : (
+      )) : (
         <Box sx={{ mt: 3.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography sx={{ fontSize: 13, color: colors.textMuted }}>이번 주 과제</Typography>
           {study.mySubmitted == null ? (
@@ -90,7 +91,7 @@ export default function HomePage() {
   const { logout } = useAuth();
   const router = useRouter();
   const toast = useToast();
-  const { data: studies, loading, error, reload } = useAsync(() => (user ? getMyStudies() : Promise.resolve([] as StudySummary[])), [user?.id]);
+  const { data: studies, loading, error, reload } = useAsync(() => (user ? loadHomeStudies() : Promise.resolve([] as StudySummary[])), [user?.id]);
   const [code, setCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);

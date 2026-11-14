@@ -2,16 +2,19 @@
 
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
 import { useEffect, useState } from 'react';
+import { USE_MOCK } from '@/lib/config';
 import { fromInputValue, toInputValue } from '@/lib/dates';
 import type { Week, WeekInput } from '@/types/api';
 
-/** ⚠️ assignment_type 값은 백엔드와 맞춰야 해요 (지금은 임시 값) */
 export const ASSIGNMENT_TYPES = [
+  { value: 'LINK', label: '링크 제출' },
   { value: 'LINKEDIN', label: '링크드인 글' },
   { value: 'BLOG', label: '블로그 글' },
   { value: 'NOTION', label: '노션 정리' },
   { value: 'FILE', label: '파일 제출' },
+  { value: 'LINK_AND_FILE', label: '링크 및 파일 제출' },
 ];
+
 
 interface FormState {
   weekNo: string;
@@ -37,7 +40,7 @@ export default function WeekDialog({
   onClose: () => void;
   onSubmit: (input: WeekInput) => Promise<void>;
 }) {
-  const [form, setForm] = useState<FormState>({ weekNo: '', title: '', assignmentType: 'LINKEDIN', assignmentDescription: '', sessionAt: '', location: '', deadline: '' });
+  const [form, setForm] = useState<FormState>({ weekNo: '', title: '', assignmentType: 'LINK', assignmentDescription: '', sessionAt: '', location: '', deadline: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,19 +50,22 @@ export default function WeekDialog({
     setForm({
       weekNo: String(week?.weekNo ?? defaultWeekNo),
       title: week?.title ?? '',
-      assignmentType: week?.assignmentType ?? 'LINKEDIN',
-      assignmentDescription: week?.assignmentDescription ?? '세션 내용을 정리해 링크드인에 올리고 링크를 제출해 주세요.',
+      assignmentType: week?.assignmentType ?? 'LINK',
+      assignmentDescription: week?.assignmentDescription ?? '',
       sessionAt: toInputValue(week?.sessionAt),
       location: week?.location ?? '',
       deadline: toInputValue(week?.deadline),
     });
   }, [open, week, defaultWeekNo]);
 
+  const availableTypes = USE_MOCK ? ASSIGNMENT_TYPES : ASSIGNMENT_TYPES.filter(({ value }) => value === 'LINK' || value === week?.assignmentType);
+
   const set = (key: keyof FormState) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const handleSubmit = async () => {
     if (!form.title.trim()) return setError('주차 제목을 입력해 주세요.');
     if (!Number(form.weekNo)) return setError('주차 번호를 입력해 주세요.');
+    if (!USE_MOCK && !form.deadline) return setError('과제 마감일을 입력해 주세요.');
     if (form.sessionAt && form.deadline && form.deadline < form.sessionAt) return setError('마감일이 세션 일시보다 빨라요.');
     setSubmitting(true);
     setError(null);
@@ -68,9 +74,9 @@ export default function WeekDialog({
         weekNo: Number(form.weekNo),
         title: form.title.trim(),
         assignmentType: form.assignmentType,
-        assignmentDescription: form.assignmentDescription.trim() || null,
+        assignmentDescription: form.assignmentDescription.trim(),
         sessionAt: fromInputValue(form.sessionAt),
-        location: form.location.trim() || null,
+        location: form.location.trim(),
         deadline: fromInputValue(form.deadline),
       });
     } catch (e) {
@@ -92,8 +98,8 @@ export default function WeekDialog({
           <TextField label="세션 일시" type="datetime-local" value={form.sessionAt} onChange={set('sessionAt')} slotProps={{ inputLabel: { shrink: true } }} />
           <TextField label="장소" placeholder="예: 스터디룸 B" value={form.location} onChange={set('location')} />
           <TextField label="과제 마감일" type="datetime-local" value={form.deadline} onChange={set('deadline')} slotProps={{ inputLabel: { shrink: true } }} />
-          <TextField select label="과제 형식" value={form.assignmentType} onChange={set('assignmentType')}>
-            {ASSIGNMENT_TYPES.map((t) => (
+          <TextField select label="과제 형식" disabled={!USE_MOCK && !!week} value={form.assignmentType} onChange={set('assignmentType')}>
+            {availableTypes.map((t) => (
               <MenuItem key={t.value} value={t.value}>
                 {t.label}
               </MenuItem>

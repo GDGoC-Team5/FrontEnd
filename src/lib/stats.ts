@@ -108,14 +108,14 @@ export function computeManagerStats(
   const sorted = [...weeks].sort((a, b) => a.weekNo - b.weekNo);
   const upTo = selectedWeek ? sorted.filter((w) => w.weekNo <= selectedWeek.weekNo) : sorted;
 
-  const subOf = (memberId: number, weekId: number) =>
-    (subsByWeek[weekId] ?? []).find((s) => s.memberId === memberId) ?? null;
+  const subOf = (member: StudyMember, weekId: number) =>
+    (subsByWeek[weekId] ?? []).find((s) => s.userId !== undefined ? s.userId === member.userId : s.memberId === member.id) ?? null;
 
-  const weekRate = (w: Week) => pct(targets.filter((m) => subOf(m.id, w.id)).length, targets.length);
+  const weekRate = (w: Week) => pct(targets.filter((m) => subOf(m, w.id)).length, targets.length);
 
   const overallRateUpTo = (list: Week[]) => {
     const total = targets.length * list.length;
-    const done = list.reduce((acc, w) => acc + targets.filter((m) => subOf(m.id, w.id)).length, 0);
+    const done = list.reduce((acc, w) => acc + targets.filter((m) => subOf(m, w.id)).length, 0);
     return pct(done, total);
   };
 
@@ -124,7 +124,7 @@ export function computeManagerStats(
 
   const rows: MemberRow[] = targets.map((member) => {
     const cells = upTo.map((week) => {
-      const submission = subOf(member.id, week.id);
+      const submission = subOf(member, week.id);
       return { week, submission, state: getSubmitState(week, submission, now) };
     });
     const counted = cells.filter((c) => c.state !== 'PENDING');
@@ -137,7 +137,7 @@ export function computeManagerStats(
     return { member, cells, rate, health, reason };
   });
 
-  const missingMembers = selectedWeek ? targets.filter((m) => !subOf(m.id, selectedWeek.id)) : [];
+  const missingMembers = selectedWeek ? targets.filter((m) => !subOf(m, selectedWeek.id)) : [];
 
   return {
     targets,
