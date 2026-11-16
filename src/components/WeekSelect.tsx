@@ -10,12 +10,15 @@ export default function WeekSelect({
   onChange,
   highlight = false,
   disabled = false,
+  compact = false, 
 }: {
   weeks: Week[];
   value: number | null;
   onChange: (weekId: number) => void;
   highlight?: boolean;
   disabled?: boolean;
+  /** 카드 제목 옆에 붙이는 작은 버전 (스터디원 대시보드 '우수 스터디원') */
+  compact?: boolean; 
 }) {
   return (
     <Select
@@ -25,10 +28,10 @@ export default function WeekSelect({
       onChange={(e) => onChange(Number(e.target.value))}
       displayEmpty
       sx={{
-        minWidth: 110,
-        height: 44,
-        borderRadius: '9px',
-        fontSize: 18,
+        minWidth: compact ? 84 : 110,          
+        height: compact ? 30 : 44,             
+        borderRadius: compact ? '6px' : '9px', 
+        fontSize: compact ? 13 : 18,          
         ...(highlight && {
           bgcolor: 'primary.main',
           color: '#fff',
