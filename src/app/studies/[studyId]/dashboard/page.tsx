@@ -17,6 +17,7 @@ import { USE_MOCK } from '@/lib/config';
 import { computeStudentStats, isDue } from '@/lib/stats';
 import { useAsync } from '@/lib/useAsync';
 import { colors } from '@/theme/theme';
+import BestMemberCard from '@/components/BestMemberCard';
 
 /** 피그마 Student-dashboard */
 export default function StudentDashboardPage() {
@@ -143,12 +144,7 @@ export default function StudentDashboardPage() {
             </Typography>
           </Panel>
 
-          <Panel title="AI 빈틈 피드백">
-            <Typography sx={{ color: colors.textSub, fontSize: 15, fontWeight: 600 }}>다른 스터디원의 정리본과 비교해 빠진 개념을 알려드려요</Typography>
-            <Box sx={{ mt: 2, p: 2, borderRadius: '13px', bgcolor: colors.bg, color: colors.textMuted, fontSize: 14 }}>
-              추가 기능으로 준비 중이에요. (ERD의 ai_feedback 테이블은 있지만 아직 API가 없어요)
-            </Box>
-          </Panel>
+          <BestMemberCard weeks={data?.weeks ?? []} />
         </Box>
       </Box>
 
