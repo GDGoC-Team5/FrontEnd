@@ -3,7 +3,7 @@
 import { Box, Button } from '@mui/material';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { isApiError } from '@/api/errors';
 import { getMembers, getStudy } from '@/api/studies';
 import AppSidebar, { SIDEBAR_WIDTH, TOPBAR_HEIGHT } from '@/components/AppSidebar';
@@ -27,6 +27,20 @@ export default function StudyLayout({ children }: { children: ReactNode }) {
     const [study, members] = await Promise.all([getStudy(studyId), getMembers(studyId)]);
     return { study, members };
   }, [studyId, user?.id]);
+
+  // 레이아웃은 하위 화면을 오가도 다시 마운트되지 않아서, 다른 사람이 가입/탈퇴해도 목록이 그대로 남아요.
+  // 탭으로 돌아오거나 창에 포커스가 오면 조용히 다시 불러와요. (data가 있으면 로딩 화면은 안 뜸)
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void reload();
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [reload]);
 
   const value = useMemo<StudyContextValue | null>(() => {
     if (!data || !user) return null;

@@ -36,11 +36,19 @@ export default function StudyManagePage() {
   const [inviteCode, setInviteCode] = useState<string | null | undefined>(study.inviteCode);
   const [reissuing, setReissuing] = useState(false);
 
+  // 관리 화면에 들어올 때마다 멤버 목록을 최신으로
+  useEffect(() => {
+    void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     setName(study.name);
     setDescription(study.description ?? '');
     setInviteCode(study.inviteCode);
-  }, [study]);
+    // 포커스 때 자동 새로고침으로 입력 중인 내용이 덮이지 않도록 스터디가 바뀔 때만 채워요
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [study.id]);
 
   const save = async () => {
     if (!name.trim()) {
