@@ -28,9 +28,14 @@ export default function SubmissionDialog({ submission, nickname, onClose }: { su
                 </a>
               </Typography>
             )}
-            <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 15, lineHeight: 1.7, bgcolor: colors.bg, borderRadius: '13px', p: 2, minHeight: 120 }}>
-              {submission.content || '(본문 없이 링크만 제출했어요)'}
-            </Box>
+            {!submission.originalLink && !submission.content && (
+              <Typography sx={{ color: colors.textMuted }}>제출된 링크가 없어요.</Typography>
+            )}
+            {submission.content && (
+              <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 15, lineHeight: 1.7, bgcolor: colors.bg, borderRadius: '13px', p: 2, minHeight: 120 }}>
+                {submission.content}
+              </Box>
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={onClose}>닫기</Button>

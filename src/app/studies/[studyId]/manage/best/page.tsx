@@ -19,7 +19,7 @@ import type { StudyMember, Submission } from '@/types/api';
 function summary(sub: Submission) {
   if (sub.title) return sub.title;
   const firstLine = (sub.content ?? '').split('\n').map((l) => l.replace(/^#+\s*/, '').trim()).find(Boolean);
-  return firstLine || '링크만 제출했어요';
+  return firstLine || '제출 기록 보기';
 }
 
 /** 피그마 Student-mvp (주차별 우수 스터디원) */
