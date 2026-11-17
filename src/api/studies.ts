@@ -53,10 +53,18 @@ export function getMembers(studyId: number | string) {
   return api.get<ServerStudyMember[]>(path).then((members) => members.map((member) => toStudyMember(studyId, member)));
 }
 
-type ServerStudyMember = { userId: number; name: string; role: StudyRole };
+type ServerStudyMember = { userId: number; name: string; email?: string | null; role: StudyRole; joinedAt?: string | null };
 
-function toStudyMember(studyId: number | string, { userId, name, role }: ServerStudyMember): StudyMember {
-  return { id: userId, studyId: Number(studyId), userId, nickname: name, role };
+function toStudyMember(studyId: number | string, { userId, name, email, role, joinedAt }: ServerStudyMember): StudyMember {
+  return {
+    id: userId,
+    studyId: Number(studyId),
+    userId,
+    nickname: name,
+    email: email ?? undefined,
+    role,
+    joinedAt: joinedAt ?? undefined,
+  };
 }
 
 export async function getMember(studyId: number | string, memberId: number) {

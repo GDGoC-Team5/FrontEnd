@@ -1,6 +1,6 @@
 'use client';
 
-import { Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import StatusChip from '@/components/StatusChip';
 import { fmtMD } from '@/lib/dates';
 import type { MyWeekRow } from '@/lib/stats';
@@ -8,9 +8,11 @@ import type { MyWeekRow } from '@/lib/stats';
 /** 내 제출 이력 표 (대시보드·내 제출 이력 화면 공용) */
 export default function MyHistoryTable({ rows, onRowClick }: { rows: MyWeekRow[]; onRowClick?: (row: MyWeekRow) => void }) {
   return (
-    <Table size="small" sx={{ tableLayout: 'fixed' }}>
+    // 고정 폭 칸 합이 폰 너비보다 커서 제목 칸이 0으로 줄던 문제: 최소 너비를 두고 좁으면 가로 스크롤
+    <TableContainer sx={{ overflowX: 'auto' }}>
+    <Table size="small" sx={{ tableLayout: 'fixed', minWidth: 520 }}>
       <TableHead>
-        <TableRow>
+        <TableRow sx={{ '& th': { whiteSpace: 'nowrap' } }}>
           <TableCell sx={{ width: 72 }}>주차</TableCell>
           <TableCell>제목</TableCell>
           <TableCell sx={{ width: 84 }}>제출일</TableCell>
@@ -43,5 +45,6 @@ export default function MyHistoryTable({ rows, onRowClick }: { rows: MyWeekRow[]
         ))}
       </TableBody>
     </Table>
+    </TableContainer>
   );
 }
